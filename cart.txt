@@ -1,0 +1,439 @@
+{% extends "base_user.html" %}
+
+{% block title %}My Cart | PharmaCare{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="text-center mb-4 fw-bold" style="color:#10847e;">🛒 My Cart</h2>
+
+  {% if session.get('cart') %}
+    <ul class="list-group mb-4" id="cart-list">
+      {% for product_id, item in session.get('cart').items() %}
+        <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ product_id }}">
+          <div>
+            <strong>{{ item.name }}</strong><br>
+            Unit Price: ₹<span class="unit-price">{{ item.price }}</span> × 
+            <span class="quantity">{{ item.quantity }}</span> = ₹<span class="subtotal">{{ item.price * item.quantity }}</span>
+          </div>
+          <div>
+            <button class="btn btn-sm btn-danger decrement-btn">-</button>
+            <button class="btn btn-sm btn-success increment-btn">+</button>
+            <button class="btn btn-sm btn-outline-danger remove-from-cart">Remove</button>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h5>Total Amount: ₹<span id="total-amount">0.00</span></h5>
+      <div>
+        <button class="btn btn-outline-success me-2" id="pay-cash">Pay Cash</button>
+        <button class="btn btn-outline-primary me-2" id="pay-upi">Pay via UPI</button>
+        <button class="btn btn-outline-warning" id="pay-card">Pay with Card</button>
+      </div>
+    </div>
+
+    <div id="upi-qr" class="text-center mb-3" style="display:none;">
+      <p>Scan this QR to pay via UPI:</p>
+      <img src="{{ url_for('static', filename='qr.jpg') }}" alt="UPI QR" class="img-fluid" style="max-width:200px;">
+    </div>
+
+    <div id="card-payment" class="text-center mt-4" style="display:none;">
+      <h5>Enter Card Details</h5>
+      <form id="card-form">
+        <input type="text" id="card-number" placeholder="Card Number (16 digits)" class="form-control mb-2" required>
+        <input type="text" id="card-holder" placeholder="Card Holder Name" class="form-control mb-2" required>
+        <input type="text" id="expiry" placeholder="MM/YY" class="form-control mb-2" required>
+        <input type="text" id="cvv" placeholder="CVV (3 digits)" class="form-control mb-2" required>
+        <button type="submit" class="btn btn-success">Pay ₹<span id="card-total">0.00</span></button>
+      </form>
+    </div>
+
+    <div id="payment-receipt" class="text-center mt-4" style="display:none;">
+      <h5>Payment Receipt</h5>
+      <p id="receipt-message"></p>
+      <p>Total Paid: ₹<span id="receipt-amount">0.00</span></p>
+      <button class="btn btn-primary" id="close-receipt">Close</button>
+    </div>
+
+  {% else %}
+    <p class="text-center text-muted mt-4">Your cart is empty. Browse medicines and add items to your cart.</p>
+  {% endif %}
+</div>
+
+<script>
+// Update subtotal and total
+function updateTotals() {
+  let total = 0;
+  document.querySelectorAll("#cart-list li").forEach(li => {
+    const qty = parseInt(li.querySelector(".quantity").innerText);
+    const price = parseFloat(li.querySelector(".unit-price").innerText);
+    const subtotal = qty * price;
+    li.querySelector(".subtotal").innerText = subtotal.toFixed(2);
+    total += subtotal;
+  });
+  document.getElementById("total-amount").innerText = total.toFixed(2);
+}
+
+updateTotals();
+
+// Helper to handle login-required responses
+function handleResponse(res) {
+  if (res.status === 401) {
+    alert("Please login to modify the cart!");
+    window.location.href = "/login"; // Or trigger login modal
+    throw "login_required";
+  }
+  return res.json();
+}
+
+// Increment buttons
+document.querySelectorAll(".increment-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const li = this.closest("li");
+    const product_id = li.dataset.id;
+    fetch("/add_to_cart", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({product_id})
+    })
+    .then(handleResponse)
+    .then(data => {
+      li.querySelector(".quantity").innerText = data.quantity;
+      document.getElementById("cart-count").innerText = data.cart_count;
+      updateTotals();
+    })
+    .catch(err => { if (err !== "login_required") console.error(err); });
+  });
+});
+
+// Decrement buttons
+document.querySelectorAll(".decrement-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const li = this.closest("li");
+    const product_id = li.dataset.id;
+    fetch("/decrement_cart", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({product_id})
+    })
+    .then(handleResponse)
+    .then(data => {
+      if (data.quantity === 0) li.remove();
+      else li.querySelector(".quantity").innerText = data.quantity;
+      document.getElementById("cart-count").innerText = data.cart_count;
+      updateTotals();
+    })
+    .catch(err => { if (err !== "login_required") console.error(err); });
+  });
+});
+
+// Remove buttons
+document.querySelectorAll(".remove-from-cart").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const li = this.closest("li");
+    const product_id = li.dataset.id;
+    fetch("/remove_from_cart", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({product_id})
+    })
+    .then(handleResponse)
+    .then(data => {
+      li.remove();
+      document.getElementById("cart-count").innerText = data.cart_count;
+      updateTotals();
+    })
+    .catch(err => { if (err !== "login_required") console.error(err); });
+  });
+});
+
+// Show receipt
+// Show receipt and save order to backend
+function showReceipt(method) {
+  const total = document.getElementById("total-amount").innerText;
+
+  // Send cart to backend
+  fetch("/place_order", {method:"POST"})
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            // Show receipt
+            document.getElementById("receipt-message").innerText = "Payment Method: " + method;
+            document.getElementById("receipt-amount").innerText = total;
+
+            document.getElementById("pay-cash").style.display = "none";
+            document.getElementById("pay-upi").style.display = "none";
+            document.getElementById("pay-card").style.display = "none";
+            document.getElementById("card-payment").style.display = "none";
+            document.getElementById("upi-qr").style.display = "none";
+
+            document.getElementById("payment-receipt").style.display = "block";
+        } else {
+            alert("Error placing order: " + data.message);
+        }
+    });
+}
+
+
+// Cash payment
+document.getElementById("pay-cash")?.addEventListener("click", () => showReceipt("Cash"));
+
+// UPI payment
+document.getElementById("pay-upi")?.addEventListener("click", () => {
+  document.getElementById("card-payment").style.display = "none";
+  document.getElementById("upi-qr").style.display = "block";
+});
+
+// Card payment
+document.getElementById("pay-card")?.addEventListener("click", () => {
+  document.getElementById("upi-qr").style.display = "none";
+  document.getElementById("card-payment").style.display = "block";
+  document.getElementById("card-total").innerText = document.getElementById("total-amount").innerText;
+});
+
+// Card form submit
+document.getElementById("card-form")?.addEventListener("submit", function(e){
+  e.preventDefault();
+  const cardNumber = document.getElementById("card-number").value.trim();
+  const cardHolder = document.getElementById("card-holder").value.trim();
+  const expiry = document.getElementById("expiry").value.trim();
+  const cvv = document.getElementById("cvv").value.trim();
+
+  if(!/^\d{16}$/.test(cardNumber)){ alert("Card number must be 16 digits!"); return; }
+  if(cardHolder.length < 3){ alert("Enter valid card holder name!"); return; }
+  if(!/^\d{2}\/\d{2}$/.test(expiry)){ alert("Expiry must be in MM/YY format!"); return; }
+  if(!/^\d{3}$/.test(cvv)){ alert("CVV must be 3 digits!"); return; }
+
+  showReceipt("Card");
+});
+
+// Close receipt
+document.getElementById("close-receipt")?.addEventListener("click", () => {
+  fetch("/clear_cart", {method:"POST"}).then(res => location.reload());
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{% extends "base_user.html" %}
+
+{% block title %}My Cart | PharmaCare{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="text-center mb-4 fw-bold" style="color:#10847e;">🛒 My Cart</h2>
+
+  {% if session.get('cart') %}
+    <ul class="list-group mb-4" id="cart-list">
+      {% for product_id, item in session.get('cart').items() %}
+        <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ product_id }}">
+          <div>
+            <strong>{{ item.name }}</strong><br>
+            Unit Price: ₹<span class="unit-price">{{ item.price }}</span> × 
+            <span class="quantity">{{ item.quantity }}</span> = ₹<span class="subtotal">{{ item.price * item.quantity }}</span>
+          </div>
+          <div>
+            <button class="btn btn-sm btn-danger decrement-btn">-</button>
+            <button class="btn btn-sm btn-success increment-btn">+</button>
+            <button class="btn btn-sm btn-outline-danger remove-from-cart">Remove</button>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h5>Total Amount: ₹<span id="total-amount">0.00</span></h5>
+      <div>
+        <button class="btn btn-outline-success me-2" id="pay-cash">Pay Cash</button>
+        <button class="btn btn-outline-primary me-2" id="pay-upi">Pay via UPI</button>
+        <button class="btn btn-outline-warning" id="pay-card">Pay with Card</button>
+      </div>
+    </div>
+
+    <div id="upi-qr" class="text-center mb-3" style="display:none;">
+  <p>Scan this QR to pay via UPI:</p>
+  <img src="{{ url_for('static', filename='qr.jpg') }}" alt="UPI QR" class="img-fluid" style="max-width:200px;">
+  <br>
+  <button class="btn btn-success mt-2" id="confirm-upi">Confirm Payment</button>
+</div>
+
+
+    <div id="card-payment" class="text-center mt-4" style="display:none;">
+      <h5>Enter Card Details</h5>
+      <form id="card-form">
+        <input type="text" id="card-number" placeholder="Card Number (16 digits)" class="form-control mb-2" required>
+        <input type="text" id="card-holder" placeholder="Card Holder Name" class="form-control mb-2" required>
+        <input type="text" id="expiry" placeholder="MM/YY" class="form-control mb-2" required>
+        <input type="text" id="cvv" placeholder="CVV (3 digits)" class="form-control mb-2" required>
+        <button type="submit" class="btn btn-success">Pay ₹<span id="card-total">0.00</span></button>
+      </form>
+    </div>
+
+    <div id="payment-receipt" class="text-center mt-4" style="display:none;">
+      <h5>Payment Receipt</h5>
+      <p id="receipt-message"></p>
+      <p>Total Paid: ₹<span id="receipt-amount">0.00</span></p>
+      <button class="btn btn-primary" id="close-receipt">Close</button>
+    </div>
+
+  {% else %}
+    <p class="text-center text-muted mt-4">Your cart is empty. Browse medicines and add items to your cart.</p>
+  {% endif %}
+</div>
+
+<script>
+// Update subtotal and total
+function updateTotals() {
+  let total = 0;
+  document.querySelectorAll("#cart-list li").forEach(li => {
+    const qty = parseInt(li.querySelector(".quantity").innerText);
+    const price = parseFloat(li.querySelector(".unit-price").innerText);
+    const subtotal = qty * price;
+    li.querySelector(".subtotal").innerText = subtotal.toFixed(2);
+    total += subtotal;
+  });
+  document.getElementById("total-amount").innerText = total.toFixed(2);
+}
+
+updateTotals();
+
+// Helper to handle login-required responses
+function handleResponse(res) {
+  if (res.status === 401) {
+    alert("Please login to modify the cart!");
+    window.location.href = "/login"; // Or trigger login modal
+    throw "login_required";
+  }
+  return res.json();
+}
+
+// Increment buttons
+document.querySelectorAll(".increment-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const li = this.closest("li");
+    const product_id = li.dataset.id;
+    fetch("/add_to_cart", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({product_id})
+    })
+    .then(handleResponse)
+    .then(data => {
+      li.querySelector(".quantity").innerText = data.quantity;
+      document.getElementById("cart-count").innerText = data.cart_count;
+      updateTotals();
+    })
+    .catch(err => { if (err !== "login_required") console.error(err); });
+  });
+});
+
+// Decrement buttons
+document.querySelectorAll(".decrement-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const li = this.closest("li");
+    const product_id = li.dataset.id;
+    fetch("/decrement_cart", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({product_id})
+    })
+    .then(handleResponse)
+    .then(data => {
+      if (data.quantity === 0) li.remove();
+      else li.querySelector(".quantity").innerText = data.quantity;
+      document.getElementById("cart-count").innerText = data.cart_count;
+      updateTotals();
+    })
+    .catch(err => { if (err !== "login_required") console.error(err); });
+  });
+});
+
+// Remove buttons
+document.querySelectorAll(".remove-from-cart").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const li = this.closest("li");
+    const product_id = li.dataset.id;
+    fetch("/remove_from_cart", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({product_id})
+    })
+    .then(handleResponse)
+    .then(data => {
+      li.remove();
+      document.getElementById("cart-count").innerText = data.cart_count;
+      updateTotals();
+    })
+    .catch(err => { if (err !== "login_required") console.error(err); });
+  });
+});
+
+// Show receipt
+// Show receipt and save order to backend
+// Place order and redirect to receipt page
+function showReceipt(method) {
+  fetch("/place_order", { method: "POST" })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        window.location.href = data.receipt_url + "?method=" + method;
+      } else {
+        alert("Error placing order: " + data.message);
+      }
+    })
+    .catch(err => console.error("Error placing order:", err));
+}
+
+
+// Cash payment
+document.getElementById("pay-cash")?.addEventListener("click", () => showReceipt("Cash"));
+
+// UPI payment
+document.getElementById("pay-upi")?.addEventListener("click", () => {
+  document.getElementById("card-payment").style.display = "none";
+  document.getElementById("upi-qr").style.display = "block";
+});
+
+// Card payment
+document.getElementById("pay-card")?.addEventListener("click", () => {
+  document.getElementById("upi-qr").style.display = "none";
+  document.getElementById("card-payment").style.display = "block";
+  document.getElementById("card-total").innerText = document.getElementById("total-amount").innerText;
+});
+
+// Card form submit
+document.getElementById("card-form")?.addEventListener("submit", function(e){
+  e.preventDefault();
+  const cardNumber = document.getElementById("card-number").value.trim();
+  const cardHolder = document.getElementById("card-holder").value.trim();
+  const expiry = document.getElementById("expiry").value.trim();
+  const cvv = document.getElementById("cvv").value.trim();
+
+  if(!/^\d{16}$/.test(cardNumber)){ alert("Card number must be 16 digits!"); return; }
+  if(cardHolder.length < 3){ alert("Enter valid card holder name!"); return; }
+  if(!/^\d{2}\/\d{2}$/.test(expiry)){ alert("Expiry must be in MM/YY format!"); return; }
+  if(!/^\d{3}$/.test(cvv)){ alert("CVV must be 3 digits!"); return; }
+
+  showReceipt("Card");
+});
+
+
+// Close receipt
+document.getElementById("close-receipt")?.addEventListener("click", () => {
+  fetch("/clear_cart", {method:"POST"}).then(res => location.reload());
+});
+</script>
+{% endblock %}

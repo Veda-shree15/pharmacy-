@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PharmaCare - Your Online Pharmacy</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- ✅ Flash Messages -->
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="container mt-3">
+      {% for message in messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #10847e;">
+  <div class="container-fluid">
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" width="40" height="40" class="me-2">
+      <span class="fs-4 fw-bold">PharmaCare</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+      data-bs-target="#navbarNav" aria-controls="navbarNav"
+      aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="#">About Us</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Shop</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Cart</a></li>
+        <li class="nav-item"><a class="nav-link" href="#healthcare">Health Tips</a></li>
+        
+        {% if session.get('user_name') %}
+          <li class="nav-item">
+            <a class="nav-link">Welcome, {{ session['user_name'] }}</a>
+          </li>
+          <li class="nav-item">
+            <a class="btn btn-outline-light ms-2" href="{{ url_for('logout') }}">Logout</a>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <button class="btn btn-outline-light ms-3" data-bs-toggle="modal" data-bs-target="#loginModal">Login</button>
+          </li>
+        {% endif %}
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Login Modal -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="loginModalLabel">Login to PharmaCare</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form action="{{ url_for('login') }}" method="post">
+          <div class="mb-3">
+            <label for="email" class="form-label">Email address</label>
+            <input type="email" class="form-control" name="email" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" name="password" required>
+          </div>
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" name="admin" id="adminCheck">
+            <label class="form-check-label" for="adminCheck">Login as Admin</label>
+          </div>
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-success">Login</button>
+          </div>
+        </form>
+        <p class="text-center mt-3">Don't have an account? 
+          <a href="#" data-bs-toggle="modal" data-bs-target="#signupModal" data-bs-dismiss="modal">Sign up</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Signup Modal -->
+<div class="modal fade" id="signupModal" tabindex="-1" aria-labelledby="signupModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="signupModalLabel">Register at PharmaCare</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form action="{{ url_for('signup') }}" method="post">
+          <div class="mb-3">
+            <label for="name" class="form-label">Full Name</label>
+            <input type="text" class="form-control" name="name" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email address</label>
+            <input type="email" class="form-control" name="email" required>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Create Password</label>
+            <input type="password" class="form-control" name="password" required>
+          </div>
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-info text-white">Sign Up</button>
+          </div>
+        </form>
+        <p class="text-center mt-3">Already registered? 
+          <a href="#" data-bs-toggle="modal" data-bs-target="#loginModal" data-bs-dismiss="modal">Login</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Banner Carousel -->
+<div id="bannerCarousel" class="carousel slide mt-3 container" data-bs-ride="carousel" data-bs-interval="3000">
+  <div class="carousel-inner rounded">
+    <div class="carousel-item active">
+      <a href="#"><img src="{{ url_for('static', filename='banner1.jpg') }}" class="d-block w-100 carousel-banner" alt="Banner 1"></a>
+    </div>
+    <div class="carousel-item">
+      <a href="#"><img src="{{ url_for('static', filename='banner2.jpg') }}" class="d-block w-100 carousel-banner" alt="Banner 2"></a>
+    </div>
+    <div class="carousel-item">
+      <a href="#"><img src="{{ url_for('static', filename='banner3.jpg') }}" class="d-block w-100 carousel-banner" alt="Banner 3"></a>
+    </div>
+  </div>
+  <button class="carousel-control-prev" type="button" data-bs-target="#bannerCarousel" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon"></span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#bannerCarousel" data-bs-slide="next">
+    <span class="carousel-control-next-icon"></span>
+  </button>
+</div>
+
+<!-- Shop by Category -->
+<section class="container my-5">
+  <h2 class="text-center mb-4">Shop by Category</h2>
+  <div class="row text-center">
+    {% set categories = [
+      ("Medicines", "category1.jpg"),
+      ("Wellness", "category2.jpg"),
+      ("Healthcare Devices", "category3.jpg"),
+      ("Personal Care", "category4.jpg"),
+      ("Nutrition", "category5.jpg"),
+      ("Orders", "category6.jpg")
+    ] %}
+    {% for name, image in categories %}
+    <div class="col-md-2 col-6 mb-4">
+      <a href="{{ url_for('category', name=name) }}">
+        <img src="{{ url_for('static', filename=image) }}" class="img-fluid rounded shadow-sm mb-2" alt="{{ name }}">
+        <h6>{{ name }}</h6>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Health Tips -->
+<section class="container my-5" id="healthcare">
+  <h2 class="text-center mb-4">Health Care Tips</h2>
+  <div class="position-relative">
+    <button class="scroll-btn left" onclick="scrollTips(-1)">&#10094;</button>
+    <div class="tips-row" id="tipsRow">
+      {% set tips = [
+        ("hydration.jpg", "Stay hydrated daily!"),
+        ("exercise.jpg", "Regular exercise boosts health."),
+        ("nutrition.jpg", "Eat balanced meals!"),
+        ("stress.jpg", "Do Meditation – Calm your mind and improve focus!"),
+        ("sleep.jpg", "Get 7-8 hours of sleep!")
+      ] %}
+      {% for image, text in tips %}
+      <div class="tip-card">
+        <img src="{{ url_for('static', filename=image) }}" alt="Tip">
+        <div class="tip-overlay">{{ text }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <button class="scroll-btn right" onclick="scrollTips(1)">&#10095;</button>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="text-white text-center py-4" style="background-color: #10847e;">
+  <p class="mb-0">&copy; 2025 PharmaCare. All rights reserved.</p>
+</footer>
+
+<!-- JavaScript -->
+<script>
+  function scrollTips(direction) {
+    const row = document.getElementById('tipsRow');
+    const scrollAmount = 270;
+    row.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='login.js') }}"></script>
+
+</body>
+</html>
+
+
+
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_mysqldb import MySQL
+import MySQLdb.cursors
+import re
+
+app = Flask(__name__, static_folder='static')
+app.secret_key = 'your_secret_key'
+
+# 🔌 MySQL Database Config
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = ''
+app.config['MYSQL_DB'] = 'online_pharmacy'
+
+mysql = MySQL(app)
+
+# 🌐 Home Page (with modal login/signup)
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+# 📥 Handle Login (modal form)
+@app.route('/login', methods=['POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT * FROM users WHERE email = %s AND password = %s', (email, password))
+        user = cursor.fetchone()
+
+        if user:
+            session['loggedin'] = True
+            session['id'] = user['id']
+            session['name'] = user['name']
+            session['user_name'] = user['name']  # ✅ NEW
+            session['email'] = user['email']     # ✅ NEW
+            session['role'] = user['role']
+
+            flash('Login Successful!', 'success')  # ✅ Flash message
+            if user['role'] == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            else:
+                return redirect(url_for('user_dashboard'))
+        else:
+            flash('Invalid email or password!', 'danger')
+            return redirect(url_for('home'))
+
+# 📝 Handle Signup (modal form)
+@app.route('/signup', methods=['POST'])
+def signup():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+        account = cursor.fetchone()
+
+        if account:
+            flash('Email already exists!', 'danger')
+        elif not re.match(r'[^@]+@[^@]+\.[^@]+', email):
+            flash('Invalid email address!', 'danger')
+        elif not name or not password or not email:
+            flash('Please fill out all fields!', 'warning')
+        else:
+            cursor.execute('INSERT INTO users (name, email, password, role) VALUES (%s, %s, %s, %s)', (name, email, password, 'user'))
+            mysql.connection.commit()
+            flash('Signup successful! Please log in.', 'success')
+
+    return redirect(url_for('home'))
+
+# 👤 User Dashboard
+@app.route('/user/dashboard')
+def user_dashboard():
+    if 'loggedin' in session and session['role'] == 'user':
+        return f"<h2>Welcome User: {session['name']}</h2>"
+    return redirect(url_for('home'))
+
+# 👨‍💼 Admin Dashboard
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    if 'loggedin' in session and session['role'] == 'admin':
+        return f"<h2>Welcome Admin: {session['name']}</h2>"
+    return redirect(url_for('home'))
+
+# 🔌 Category Page
+@app.route('/category/<name>')
+def category(name):
+    return f"<h2>Showing products in category: {name}</h2>"
+
+# ❌ 404 Error Page
+@app.errorhandler(404)
+def not_found(e):
+    return "<h2>Page not found</h2>", 404
+
+# 🚪 Logout
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("Logged out successfully!", "info")
+    return redirect(url_for('home'))
+
+# ✅ Run the App
+if __name__ == '__main__':
+    app.run(debug=True)

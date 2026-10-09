@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>About Us – PharmaCare</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <style>
+    @keyframes fadeInUp {
+      0% { transform: translateY(20px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    .fade-up {
+      opacity: 0;
+      animation: fadeInUp 0.8s ease-out forwards;
+    }
+    .fade-up.delay-1 { animation-delay: 0.3s; }
+    .fade-up.delay-2 { animation-delay: 0.6s; }
+    .fade-up.delay-3 { animation-delay: 0.9s; }
+    .fade-up.delay-4 { animation-delay: 1.2s; }
+    .fade-up.delay-5 { animation-delay: 1.5s; }
+
+    .stats-card {
+      text-align: center;
+      padding: 20px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .stats-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    .stats-icon {
+      width: 80px;
+      margin-bottom: 10px;
+    }
+    .counter {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  {% include 'partials/navbar.html' %}
+
+  <div class="container py-5">
+    <h1 class="fade-up">About PharmaCare</h1>
+    <p class="lead fade-up delay-1">Your trusted online pharmacy delivering safe medication and care to your doorstep.</p>
+    <hr class="fade-up delay-2">
+
+    <!-- Lottie animated logo -->
+    <div class="text-center fade-up delay-3">
+      <lottie-player src="https://assets3.lottiefiles.com/packages/lf20_pharmacy_icon.json"
+                     background="transparent" speed="1" style="width:150px;height:150px;" autoplay loop>
+      </lottie-player>
+    </div>
+
+    <h2 class="mt-4 fade-up delay-4">Our Story</h2>
+    <p class="fade-up delay-5">Founded in 2025 with the vision to make healthcare accessible for all, PharmaCare has grown from a small online pharmacy to a trusted partner for thousands of families. Every order is handled with care, professionalism, and medical expertise.</p>
+  </div>
+
+  <!-- Stats with counters -->
+  <section class="container my-5">
+    <h2 class="text-center fade-up">Why Choose Us?</h2>
+    <div class="row">
+      <div class="col-md-3 stats-card fade-up delay-1">
+        <img src="{{ url_for('static', filename='images/users.png') }}" class="stats-icon" alt="Users">
+        <div class="counter" data-target="46000000">0</div>
+        <p>Registered users</p>
+      </div>
+      <div class="col-md-3 stats-card fade-up delay-2">
+        <img src="{{ url_for('static', filename='images/orders.png') }}" class="stats-icon" alt="Orders">
+        <div class="counter" data-target="66000000">0</div>
+        <p>Orders till date</p>
+      </div>
+      <div class="col-md-3 stats-card fade-up delay-3">
+        <img src="{{ url_for('static', filename='images/medicines.png') }}" class="stats-icon" alt="Medicines">
+        <div class="counter" data-target="60000">0</div>
+        <p>Items sold last 6 months</p>
+      </div>
+      <div class="col-md-3 stats-card fade-up delay-4">
+        <img src="{{ url_for('static', filename='images/pincode.png') }}" class="stats-icon" alt="Service Area">
+        <div class="counter" data-target="19000">0</div>
+        <p>Pin‑codes serviced</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="container text-center my-4 fade-up delay-5">
+    <a href="{{ url_for('home') }}" class="btn btn-teal">Back to Home</a>
+  </div>
+
+  {% include 'partials/footer.html' %}
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest"></script>
+
+  <script>
+    // Scroll-triggered counter animation
+    const counters = document.querySelectorAll('.counter');
+    const speed = 2000; // duration in ms
+
+    const animateCount = el => {
+      const update = () => {
+        const target = +el.dataset.target;
+        const count = +el.innerText.replace(/,/g, '');
+        const increment = Math.ceil(target / (speed / 50));
+        if (count < target) {
+          el.innerText = (count + increment).toLocaleString();
+          setTimeout(update, 50);
+        } else {
+          el.innerText = target.toLocaleString();
+        }
+      };
+      update();
+    };
+
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && entry.target.innerText === "0") {
+          animateCount(entry.target);
+        }
+      });
+    }, { threshold: 0.5 });
+
+    counters.forEach(c => obs.observe(c));
+  </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+cd Desktop\online_pharmacy
+
+python app.py
+
+http://localhost:8080/phpmyadmin/
+
+pip install flask flask-mysqldb flask-login flask-wtf flask-bootstrap flask-cors
+
+
+pip install flask-bootstrap flask-cors
+
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = ''  # default for XAMPP
+app.config['MYSQL_DB'] = 'online_pharmacy'
+
+pip install xhtml2pdf
+
+✅ 5. What You Can Add Next
+🔍 Search bar with suggestions (AJAX)
+
+🛒 Add-to-cart button
+
+🧾 Login/signup with Flask
+
+📦 Product listing page
+
+✅ JSON-based live product loading
+
+📱 Mobile responsive (use container-fluid and col classes smartly)
